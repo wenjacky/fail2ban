@@ -19,8 +19,8 @@ enabled = true
 filter = v2ray
 action = iptables-allports[name=V2RAYBAN, protocol=all]
 	 dingding[name=v2ray,servername=aliBJ]
-logpath  = /home/log/access.log
-           /home/log/raz_access.log
+logpath  = /var/log/v2ray/access.log
+           /home/log/access.log
 findtime = 300
 maxretry = 1
 bantime  = 1D

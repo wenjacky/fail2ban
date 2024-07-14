@@ -1,4 +1,3 @@
-#wenjigang@aliBJ:/etc/fail2ban/jail.d$ cat *.*
 [ssh-ddos-iptables]
 enabled = true
 filter = sshd-ddos[mode=aggressive]

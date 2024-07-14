@@ -1,0 +1,27 @@
+Include /etc/ssh/sshd_config.d/*.conf
+
+Port 20822
+LogLevel INFO
+LoginGraceTime 120
+StrictModes yes
+PubkeyAuthentication yes
+IgnoreRhosts yes
+HostbasedAuthentication no
+PermitEmptyPasswords no
+ChallengeResponseAuthentication no
+X11Forwarding no
+X11DisplayOffset 10
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server
+UsePAM yes
+UseDNS no
+AddressFamily inet
+PermitRootLogin no
+SyslogFacility AUTHPRIV
+MaxAuthTries 2
+ClientAliveInterval  60
+ClientAliveCountMax  720
+PasswordAuthentication no

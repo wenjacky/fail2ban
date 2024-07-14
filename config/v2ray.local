@@ -1,0 +1,26 @@
+#wenjigang@aliBJ:/etc/fail2ban/jail.d$ cat *.*
+[ssh-ddos-iptables]
+enabled = true
+filter = sshd-ddos[mode=aggressive]
+action = iptables-allports[name=SSH-DDOS, protocol=all]
+logpath  = /var/log/auth.log
+maxretry = 2
+bantime  = 1D
+[ssh-iptables]
+enabled = true
+filter = sshd[mode=aggressive]
+action = iptables-allports[name=SSH, protocol=all]
+         dingding[name=ssh-iptables,servername=aliBJ]
+logpath  = /var/log/auth.log
+maxretry = 2
+bantime  = 1D
+[v2ray]
+enabled = true
+filter = v2ray
+action = iptables-allports[name=V2RAYBAN, protocol=all]
+	 dingding[name=v2ray,servername=aliBJ]
+logpath  = /home/log/access.log
+           /home/log/raz_access.log
+findtime = 300
+maxretry = 1
+bantime  = 1D

@@ -1,9 +1,6 @@
 {
-    "remarksbywen": "这个是一个蜜罐，主要用于吸引外部的访问，开放端口，如果有非法用户尝试，则直接调用fail2ban对应的v2ray规则ban掉，需要fail2ban搭配使用",
-    "remark_filename": "honey.json,位于fail2ban的github的config目录，这个文件要最后放在v2ray的config目录下，然后systemctl enable | start v2ray@honey",
-    "stats": {},
-    "api": {},
-    "policy": {},
+    "remarksbywen": "这个是一个蜜罐，主要用于吸引外部的访问，开放端口，如果有非法用户尝试，则直接调用fail2ban对应的v2ray规则ban掉，需要fail2ban搭配使用，见我的github",
+    "remark_filename": "honey.json,位于fail2ban的github的config目录",
     "log": {
         "access": "/var/log/v2ray/access.log",
         "loglevel": "warning"
@@ -12,7 +9,7 @@
         {
             "tag": "vmessinbound",
             "port": 10334,
-            "listen": "0.0.0.0",
+            "listen": "::",
             "protocol": "vmess",
             "settings": {
                 "clients": [
@@ -32,9 +29,5 @@
         }
     ],
     "routing": {
-        "domainStrategy": "IPOnDemand",
-        "rules": [
-            {}
-        ]
     }
 }

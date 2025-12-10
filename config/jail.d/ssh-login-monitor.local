@@ -1,0 +1,20 @@
+[ssh-login-monitor]
+enabled = true
+filter = ssh-login-monitor
+action = ssh-login-logger
+backend = systemd
+
+# 关键：设置为1，检测到一次就触发
+maxretry = 1
+bantime = 10
+findtime = 10
+
+# 日志路径
+logpath = /var/log/auth.log
+port = ssh
+protocol = tcp
+
+# 可选：禁用真正的防火墙操作
+#banaction =
+#actionban =
+#actionunban =

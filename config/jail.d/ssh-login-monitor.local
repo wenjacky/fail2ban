@@ -11,6 +11,7 @@ findtime = 10
 
 # 日志路径
 logpath = /var/log/auth.log
+        /var/log/secure
 port = ssh
 protocol = tcp
 

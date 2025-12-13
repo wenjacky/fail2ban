@@ -3,6 +3,7 @@ enabled = true
 filter = sshd-ddos[mode=aggressive]
 action = iptables-allports[name=SSH-DDOS, protocol=all]
 logpath  = /var/log/auth.log
+           /var/log/secure
 maxretry = 2
 bantime  = 1D
 [ssh-iptables]
@@ -12,6 +13,7 @@ action = iptables-allports[name=SSH, protocol=all]
          simple-ban-log[name=ssh-iptables]
 #        dingding[name=ssh-iptables,servername=aliBJ]
 logpath  = /var/log/auth.log
+        /var/log/secure
 maxretry = 2
 bantime  = 1D
 [v2ray]

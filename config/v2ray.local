@@ -9,7 +9,8 @@ bantime  = 1D
 enabled = true
 filter = sshd[mode=aggressive]
 action = iptables-allports[name=SSH, protocol=all]
-         dingding[name=ssh-iptables,servername=aliBJ]
+         simple-ban-log[name=ssh-iptables]
+#        dingding[name=ssh-iptables,servername=aliBJ]
 logpath  = /var/log/auth.log
 maxretry = 2
 bantime  = 1D
@@ -17,9 +18,11 @@ bantime  = 1D
 enabled = true
 filter = v2ray
 action = iptables-allports[name=V2RAYBAN, protocol=all]
-	 dingding[name=v2ray,servername=aliBJ]
+	     simple-ban-log[name=ssh-iptables]
+ #       dingding[name=v2ray,servername=aliBJ]
 logpath  = /var/log/v2ray/access.log
            /home/log/access.log
 findtime = 300
 maxretry = 1
 bantime  = 1D
+

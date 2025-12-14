@@ -3,6 +3,9 @@
 """
 SSH登录日志钉钉通知 - 适配您的日志格式
 支持定时通知：10分钟、1小时、每日总结
+日志格式：2025-12-14 20:19:55 xuke:password-auth from 10.8.8.1 [局域网 IP] via password
+        2025-12-14 20:20:21 root:wenjigang@macbook2021.com from 10.8.8.100 [局域网 IP] via publickey
+格式说明：时间 用户名:认证标识 from IP [位置] via 认证方式
 """
 
 # 定时任务示例：
@@ -147,7 +150,7 @@ class SSHLogProcessor:
                                 filtered_lines.append(line)
                     except:
                         # 如果时间解析失败，检查是否包含关键字
-                        if 'Accepted publickey' in line or 'root@' in line:
+                        if 'Accepted publickey' in line or 'from' in line and 'via' in line:
                             filtered_lines.append(line)
                 all_lines = filtered_lines
 
@@ -180,31 +183,17 @@ class SSHLogProcessor:
     def _parse_ssh_line(self, line):
         """解析单行SSH日志 - 针对您的格式"""
         try:
-            # 匹配您的日志格式：时间 user@host from IP [位置] via method
-            # 示例: 2025-12-14 12:03:03 root:root@a800server from 2001:250:4403:886:268a:7ff:feb7:6f7a [中国 湖南省 湘潭市 湖南科技大学] via publickey
+            # 您的日志格式：时间 用户名:认证标识 from IP [位置] via 认证方式
+            # 示例1: 2025-12-14 20:19:55 xuke:password-auth from 10.8.8.1 [局域网 IP] via password
+            # 示例2: 2025-12-14 20:20:21 root:wenjigang@macbook2021.com from 10.8.8.100 [局域网 IP] via publickey
 
-            # 第一种格式：有 @ 符号（原来的格式）
-            pattern1 = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)@(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
-            match1 = re.match(pattern1, line)
+            pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
+            match = re.match(pattern, line)
 
-            if match1:
-                time_str, user_type, username, hostname, ip, location, auth_method = match1.groups()
-                return self._build_log_entry(time_str, user_type, username, hostname, ip, location, auth_method)
+            if match:
+                time_str, username, auth_identifier, ip, location, auth_method = match.groups()
 
-            # 第二种格式：没有 @ 符号（您的实际格式）
-            # 示例: 2025-12-14 20:19:55 xuke:password-auth from 10.8.8.1 [局域网 IP]  via password
-            pattern2 = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
-            match2 = re.match(pattern2, line)
-
-            if match2:
-                time_str, username, hostname, ip, location, auth_method = match2.groups()
-                # 这种格式没有 user_type，设为与 username 相同
-                user_type = username
-                return self._build_log_entry(time_str, user_type, username, hostname, ip, location, auth_method)
-
-            # 如果没有匹配，可能是标准系统日志格式
-            if 'Accepted publickey' in line or 'sshd' in line:
-                return self._parse_standard_ssh_line(line)
+                return self._build_log_entry(time_str, username, auth_identifier, ip, location, auth_method)
 
             return None
 
@@ -212,7 +201,7 @@ class SSHLogProcessor:
             print(f"解析SSH日志行失败 '{line[:50]}...': {e}")
             return None
 
-    def _build_log_entry(self, time_str, user_type, username, hostname, ip, location, auth_method):
+    def _build_log_entry(self, time_str, username, auth_identifier, ip, location, auth_method):
         """构建日志条目"""
         # 处理位置信息
         location_info = {}
@@ -226,11 +215,20 @@ class SSHLogProcessor:
                     'organization': ' '.join(location_parts[3:]) if len(location_parts) > 3 else ''
                 }
 
+        # 生成认证备注
+        auth_note = ""
+        if auth_method == 'password':
+            auth_note = "密码认证"
+        elif auth_method == 'publickey':
+            auth_note = f"公钥: {auth_identifier}"
+        else:
+            auth_note = auth_identifier
+
         return {
             'time': time_str,
-            'user_type': user_type,
             'username': username,
-            'hostname': hostname,
+            'auth_identifier': auth_identifier,
+            'auth_note': auth_note,
             'ip': ip,
             'location': location_info,
             'location_str': location if location else '',
@@ -238,45 +236,6 @@ class SSHLogProcessor:
             'has_location': bool(location),
             'is_ipv6': ':' in ip
         }
-
-    def _parse_standard_ssh_line(self, line):
-        """解析标准系统SSH日志格式"""
-        try:
-            # 尝试匹配标准格式
-            # 示例: Dec 14 12:03:03 server sshd[12345]: Accepted publickey for root from 192.168.1.1 port 22 ssh2
-
-            # 提取时间
-            time_match = re.search(r'(\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2})', line)
-            time_str = time_match.group(1) if time_match else datetime.now().strftime('%b %d %H:%M:%S')
-
-            # 提取IP
-            ip_match = re.search(r'from\s+([0-9a-fA-F:\.]+)', line)
-            ip = ip_match.group(1) if ip_match else '未知'
-
-            # 提取用户名
-            user_match = re.search(r'for\s+(\S+)', line)
-            username = user_match.group(1) if user_match else '未知'
-
-            # 提取认证方法
-            method_match = re.search(r'Accepted\s+(\S+)', line)
-            auth_method = method_match.group(1) if method_match else 'unknown'
-
-            return {
-                'time': time_str,
-                'user_type': 'system',
-                'username': username,
-                'hostname': self.current_ip,
-                'ip': ip,
-                'location': {},
-                'location_str': '',
-                'auth_method': auth_method,
-                'has_location': False,
-                'is_ipv6': ':' in ip
-            }
-
-        except Exception as e:
-            print(f"解析标准SSH日志失败: {e}")
-            return None
 
 class SSHMessageFormatter:
     """SSH登录消息格式化器"""
@@ -327,6 +286,7 @@ class SSHMessageFormatter:
         for log in logs[-5:]:  # 最多5条
             content += f"\n- **{log['time']}**"
             content += f"\n  用户: `{log['username']}`"
+            content += f"\n  认证: {log['auth_note']}"
             content += f"\n  IP: `{log['ip']}`"
             if has_location and log.get('location_str'):
                 content += f"\n  位置: {log['location_str']}"
@@ -361,12 +321,14 @@ class SSHMessageFormatter:
                 ip_stats[ip] = {
                     'count': 0,
                     'users': set(),
+                    'auth_notes': set(),  # 记录认证备注
                     'location': log.get('location_str', ''),
                     'last_time': log['time'],
                     'method': log['auth_method']
                 }
             ip_stats[ip]['count'] += 1
             ip_stats[ip]['users'].add(log['username'])
+            ip_stats[ip]['auth_notes'].add(log.get('auth_note', ''))
 
         if ip_stats:
             content += f"\n\n### 🎯 活跃IP统计"
@@ -375,22 +337,45 @@ class SSHMessageFormatter:
             sorted_ips = sorted(ip_stats.items(), key=lambda x: x[1]['count'], reverse=True)[:5]
 
             if has_location:
-                content += "\n\n| IP地址 | 地理位置 | 登录次数 | 用户数 | 认证方式 |\n"
-                content += "| :--- | :--- | :--- | :--- | :--- |\n"
-                for ip, stats in sorted_ips:
-                    location = stats['location'][:15] + "..." if len(stats['location']) > 15 else stats['location']
-                    users = ', '.join(list(stats['users'])[:2])
-                    if len(stats['users']) > 2:
-                        users += f" 等{len(stats['users'])}个"
-                    content += f"| `{ip}` | {location or '未知'} | {stats['count']} | {users} | {stats['method']} |\n"
-            else:
-                content += "\n\n| IP地址 | 登录次数 | 用户数 | 认证方式 |\n"
+                content += "\n\n| IP地址 | 地理位置 | 登录次数 | 用户/认证 |\n"
                 content += "| :--- | :--- | :--- | :--- |\n"
                 for ip, stats in sorted_ips:
-                    users = ', '.join(list(stats['users'])[:2])
+                    location = stats['location'][:15] + "..." if len(stats['location']) > 15 else stats['location']
+
+                    # 生成用户和认证信息
+                    user_auth_info = []
+                    for user in list(stats['users'])[:2]:
+                        # 找到该用户对应的认证备注
+                        user_auths = [note for note in stats['auth_notes'] if note]
+                        if user_auths:
+                            user_auth_info.append(f"{user}({user_auths[0][:10]})")
+                        else:
+                            user_auth_info.append(user)
+
+                    users_str = ', '.join(user_auth_info)
                     if len(stats['users']) > 2:
-                        users += f" 等{len(stats['users'])}个"
-                    content += f"| `{ip}` | {stats['count']} | {users} | {stats['method']} |\n"
+                        users_str += f" 等{len(stats['users'])}个"
+
+                    content += f"| `{ip}` | {location or '未知'} | {stats['count']} | {users_str} |\n"
+            else:
+                content += "\n\n| IP地址 | 登录次数 | 用户/认证 |\n"
+                content += "| :--- | :--- | :--- |\n"
+                for ip, stats in sorted_ips:
+                    # 生成用户和认证信息
+                    user_auth_info = []
+                    for user in list(stats['users'])[:2]:
+                        # 找到该用户对应的认证备注
+                        user_auths = [note for note in stats['auth_notes'] if note]
+                        if user_auths:
+                            user_auth_info.append(f"{user}({user_auths[0][:10]})")
+                        else:
+                            user_auth_info.append(user)
+
+                    users_str = ', '.join(user_auth_info)
+                    if len(stats['users']) > 2:
+                        users_str += f" 等{len(stats['users'])}个"
+
+                    content += f"| `{ip}` | {stats['count']} | {users_str} |\n"
 
         # 最近记录
         recent_logs = logs[-8:] if len(logs) > 8 else logs
@@ -398,18 +383,20 @@ class SSHMessageFormatter:
             content += f"\n\n### 📝 最近{len(recent_logs)}条登录记录\n\n"
 
             if has_location:
-                content += "| 时间 | 用户 | IP地址 | 位置 | 认证方式 |\n"
+                content += "| 时间 | 用户 | 认证 | IP地址 | 位置 |\n"
                 content += "| :--- | :--- | :--- | :--- | :--- |\n"
                 for log in recent_logs:
                     location = log.get('location_str', '')
                     if len(location) > 10:
                         location = location[:8] + "..."
-                    content += f"| {log['time']} | `{log['username']}` | `{log['ip']}` | {location} | {log['auth_method']} |\n"
+                    auth_note = log.get('auth_note', '')[:15]
+                    content += f"| {log['time']} | `{log['username']}` | {auth_note} | `{log['ip']}` | {location} |\n"
             else:
-                content += "| 时间 | 用户 | IP地址 | 认证方式 |\n"
+                content += "| 时间 | 用户 | 认证 | IP地址 |\n"
                 content += "| :--- | :--- | :--- | :--- |\n"
                 for log in recent_logs:
-                    content += f"| {log['time']} | `{log['username']}` | `{log['ip']}` | {log['auth_method']} |\n"
+                    auth_note = log.get('auth_note', '')[:15]
+                    content += f"| {log['time']} | `{log['username']}` | {auth_note} | `{log['ip']}` |\n"
 
         content += f"\n\n> 服务器: **{hostname}** | 时段: {time_range}"
         return content
@@ -443,11 +430,13 @@ class SSHMessageFormatter:
                 user_stats[user] = {
                     'count': 0,
                     'ips': set(),
+                    'auth_notes': set(),  # 记录认证备注
                     'last_time': log['time'],
                     'methods': set()
                 }
             user_stats[user]['count'] += 1
             user_stats[user]['ips'].add(log['ip'])
+            user_stats[user]['auth_notes'].add(log.get('auth_note', ''))
             user_stats[user]['methods'].add(log['auth_method'])
 
         if user_stats:
@@ -456,11 +445,14 @@ class SSHMessageFormatter:
             # 按登录次数排序
             sorted_users = sorted(user_stats.items(), key=lambda x: x[1]['count'], reverse=True)[:5]
 
-            content += "\n\n| 用户名 | 登录次数 | 使用IP数 | 认证方式 |\n"
+            content += "\n\n| 用户名 | 登录次数 | 使用IP数 | 认证方式/备注 |\n"
             content += "| :--- | :--- | :--- | :--- |\n"
             for user, stats in sorted_users:
                 methods = ', '.join(stats['methods'])
-                content += f"| `{user}` | {stats['count']} | {len(stats['ips'])} | {methods} |\n"
+                auth_notes = ', '.join([n[:10] for n in stats['auth_notes'] if n][:2])
+                if len(stats['auth_notes']) > 2:
+                    auth_notes += f" 等{len(stats['auth_notes'])}种"
+                content += f"| `{user}` | {stats['count']} | {len(stats['ips'])} | {methods}: {auth_notes} |\n"
 
         # 地理位置分析（如果有）
         if has_location:
@@ -469,9 +461,10 @@ class SSHMessageFormatter:
                 if log.get('location_str'):
                     location = log['location_str']
                     if location not in location_stats:
-                        location_stats[location] = {'count': 0, 'users': set()}
+                        location_stats[location] = {'count': 0, 'users': set(), 'auth_notes': set()}
                     location_stats[location]['count'] += 1
                     location_stats[location]['users'].add(log['username'])
+                    location_stats[location]['auth_notes'].add(log.get('auth_note', ''))
 
             if location_stats:
                 content += f"\n\n### 🌍 地理位置分布"
@@ -479,13 +472,24 @@ class SSHMessageFormatter:
                                          key=lambda x: x[1]['count'],
                                          reverse=True)[:5]
 
-                content += "\n\n| 地理位置 | 登录次数 | 用户数 |\n"
+                content += "\n\n| 地理位置 | 登录次数 | 用户/认证 |\n"
                 content += "| :--- | :--- | :--- |\n"
                 for location, stats in sorted_locations:
-                    users = ', '.join(list(stats['users'])[:3])
-                    if len(stats['users']) > 3:
-                        users += f" 等{len(stats['users'])}个"
-                    content += f"| {location[:20]} | {stats['count']} | {users} |\n"
+                    # 生成用户和认证信息
+                    user_auth_info = []
+                    for user in list(stats['users'])[:2]:
+                        user_auths = [note for note in stats['auth_notes'] if note]
+                        if user_auths:
+                            user_auth_info.append(f"{user}({user_auths[0][:8]})")
+                        else:
+                            user_auth_info.append(user)
+
+                    users_str = ', '.join(user_auth_info)
+                    if len(stats['users']) > 2:
+                        users_str += f" 等{len(stats['users'])}个"
+
+                    location_display = location[:15] + "..." if len(location) > 15 else location
+                    content += f"| {location_display} | {stats['count']} | {users_str} |\n"
 
         # 时间分布分析
         hour_stats = {}

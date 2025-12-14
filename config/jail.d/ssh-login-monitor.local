@@ -15,6 +15,9 @@ logpath = /var/log/auth.log
 port = ssh
 protocol = tcp
 
+#这里需要加上，会覆盖所有对ignoreip的设置，因为我们需要拿到登录信息，不能让fail2ban直接过滤掉了
+ignoreip =
+
 # 可选：禁用真正的防火墙操作
 #banaction =
 #actionban =

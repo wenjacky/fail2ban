@@ -183,39 +183,26 @@ class SSHLogProcessor:
             # 匹配您的日志格式：时间 user@host from IP [位置] via method
             # 示例: 2025-12-14 12:03:03 root:root@a800server from 2001:250:4403:886:268a:7ff:feb7:6f7a [中国 湖南省 湘潭市 湖南科技大学] via publickey
 
-            # 正则表达式匹配
-            pattern = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)@(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
-            match = re.match(pattern, line)
+            # 第一种格式：有 @ 符号（原来的格式）
+            pattern1 = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)@(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
+            match1 = re.match(pattern1, line)
 
-            if match:
-                time_str, user_type, username, hostname, ip, location, auth_method = match.groups()
+            if match1:
+                time_str, user_type, username, hostname, ip, location, auth_method = match1.groups()
+                return self._build_log_entry(time_str, user_type, username, hostname, ip, location, auth_method)
 
-                # 处理位置信息
-                location_info = {}
-                if location:
-                    location_parts = location.split('\t')
-                    if len(location_parts) >= 3:
-                        location_info = {
-                            'country': location_parts[0] if len(location_parts) > 0 else '',
-                            'province': location_parts[1] if len(location_parts) > 1 else '',
-                            'city': location_parts[2] if len(location_parts) > 2 else '',
-                            'organization': ' '.join(location_parts[3:]) if len(location_parts) > 3 else ''
-                        }
+            # 第二种格式：没有 @ 符号（您的实际格式）
+            # 示例: 2025-12-14 20:19:55 xuke:password-auth from 10.8.8.1 [局域网 IP]  via password
+            pattern2 = r'^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\s+(\S+?):(\S+?)\s+from\s+(\S+?)\s+(?:\[([^\]]+)\])?\s+via\s+(\S+)$'
+            match2 = re.match(pattern2, line)
 
-                return {
-                    'time': time_str,
-                    'user_type': user_type,
-                    'username': username,
-                    'hostname': hostname,
-                    'ip': ip,
-                    'location': location_info,
-                    'location_str': location if location else '',
-                    'auth_method': auth_method,
-                    'has_location': bool(location),
-                    'is_ipv6': ':' in ip  # 判断是否是IPv6
-                }
+            if match2:
+                time_str, username, hostname, ip, location, auth_method = match2.groups()
+                # 这种格式没有 user_type，设为与 username 相同
+                user_type = username
+                return self._build_log_entry(time_str, user_type, username, hostname, ip, location, auth_method)
 
-            # 如果没有匹配，可能是标准系统日志格式，尝试解析
+            # 如果没有匹配，可能是标准系统日志格式
             if 'Accepted publickey' in line or 'sshd' in line:
                 return self._parse_standard_ssh_line(line)
 
@@ -224,6 +211,33 @@ class SSHLogProcessor:
         except Exception as e:
             print(f"解析SSH日志行失败 '{line[:50]}...': {e}")
             return None
+
+    def _build_log_entry(self, time_str, user_type, username, hostname, ip, location, auth_method):
+        """构建日志条目"""
+        # 处理位置信息
+        location_info = {}
+        if location:
+            location_parts = location.split('\t')
+            if len(location_parts) >= 3:
+                location_info = {
+                    'country': location_parts[0] if len(location_parts) > 0 else '',
+                    'province': location_parts[1] if len(location_parts) > 1 else '',
+                    'city': location_parts[2] if len(location_parts) > 2 else '',
+                    'organization': ' '.join(location_parts[3:]) if len(location_parts) > 3 else ''
+                }
+
+        return {
+            'time': time_str,
+            'user_type': user_type,
+            'username': username,
+            'hostname': hostname,
+            'ip': ip,
+            'location': location_info,
+            'location_str': location if location else '',
+            'auth_method': auth_method,
+            'has_location': bool(location),
+            'is_ipv6': ':' in ip
+        }
 
     def _parse_standard_ssh_line(self, line):
         """解析标准系统SSH日志格式"""

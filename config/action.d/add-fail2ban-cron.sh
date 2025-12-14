@@ -5,8 +5,8 @@
 declare -A CRON_TASKS=(
     ["ban-notify-10min"]="*/10 * * * * cat /var/log/fail2ban/ban-actions.log | /usr/local/bin/nali > /tmp/test.log && /usr/bin/python3 /etc/fail2ban/action.d/dingding-geo.py --logfile /tmp/test.log --hours 0.1667"
     ["ban-notify-daily"]="4 3 * * * cat /var/log/fail2ban/ban-actions.log | /usr/local/bin/nali > /tmp/test.log && /usr/bin/python3 /etc/fail2ban/action.d/dingding-geo.py --logfile /tmp/test.log --daily"
-    ["ssh-login-notify-10min"]="*/10 * * * * cat /var/log/fail2ban/ssh-login-monitor.log | /usr/local/bin/nali > /tmp/testlogin.log && /usr/bin/python3 ssh-login-notify.py --logfile /tmp/testlogin.log --hours 0.1667"
-    ["ssh-login-notify-daily"]="4 2 * * * cat /var/log/fail2ban/ssh-login-monitor.log | /usr/local/bin/nali > /tmp/testlogin.log && /usr/bin/python3 ssh-login-notify.py --logfile /tmp/testlogin.log --daily"
+    ["ssh-login-notify-10min"]="*/10 * * * * cat /var/log/fail2ban/ssh-login-monitor.log | /usr/local/bin/nali > /tmp/testlogin.log && /usr/bin/python3 /etc/fail2ban/action.d/dingding-ssh-login-notify.py --logfile /tmp/testlogin.log --hours 0.1667"
+    ["ssh-login-notify-daily"]="4 2 * * * cat /var/log/fail2ban/ssh-login-monitor.log | /usr/local/bin/nali > /tmp/testlogin.log && /usr/bin/python3 /etc/fail2ban/action.d/dingding-ssh-login-notify.py --logfile /tmp/testlogin.log --daily"
 )
 
 # 检查依赖项

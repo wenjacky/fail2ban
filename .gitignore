@@ -11,3 +11,4 @@ __pycache__
 .vagrant/
 .idea/
 .venv/
+.DS_Store

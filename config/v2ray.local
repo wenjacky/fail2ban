@@ -6,6 +6,7 @@ logpath  = /var/log/auth.log
            /var/log/secure
 maxretry = 2
 bantime  = 1D
+
 [ssh-iptables]
 enabled = true
 filter = sshd[mode=aggressive]
@@ -16,6 +17,7 @@ logpath  = /var/log/auth.log
         /var/log/secure
 maxretry = 2
 bantime  = 1D
+
 [v2ray]
 enabled = true
 filter = v2ray
@@ -43,4 +45,14 @@ port = ssh
 protocol = tcp
 #这里需要加上，会覆盖所有对ignoreip的设置，因为我们需要拿到登录信息，不能让fail2ban直接过滤掉了
 ignoreip =
+
+[frps]
+enabled = true
+filter = frps
+logpath = /var/log/frps/frps.log
+action = iptables-allports[name=fprs, protocol=all]
+	 dingding[name=frps,servername=ALIGZWJG]
+findtime = 300
+maxretry = 1
+bantime = 30m
 

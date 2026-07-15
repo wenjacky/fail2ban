@@ -92,5 +92,30 @@ test_update_hosts() {
   printf 'PASS: update-hosts\n'
 }
 
+test_documentation() {
+  local readme="$BASE_DIR/README.md"
+  [[ -f $readme ]] || fail "缺少目录说明: $readme"
+
+  assert_contains "$readme" 'https://github.com/wangyu-/tinyfecVPN/releases'
+  assert_contains "$readme" 'https://github.com/wangyu-/UDPspeeder/releases'
+  assert_contains "$readme" 'https://github.com/wangyu-/udp2raw-tunnel/releases'
+  assert_contains "$readme" '--role'
+  assert_contains "$readme" '--component'
+  assert_contains "$readme" '--dry-run'
+  assert_contains "$readme" '--enable-now'
+  assert_contains "$readme" '24096'
+  assert_contains "$readme" '44101'
+  assert_contains "$readme" '21180'
+  assert_contains "$readme" '预编译服务端'
+  assert_contains "$readme" '轮换密钥'
+  assert_contains "$readme" 'udp2raw -a'
+  assert_contains "$readme" 'systemctl status'
+  assert_contains "$readme" 'journalctl'
+  assert_contains "$readme" '回滚'
+
+  printf 'PASS: documentation\n'
+}
+
 test_units_and_roles
 test_update_hosts
+test_documentation

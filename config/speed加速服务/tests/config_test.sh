@@ -52,4 +52,45 @@ test_units_and_roles() {
   printf 'PASS: config and systemd units\n'
 }
 
+test_update_hosts() {
+  local tmp_dir config_file hosts_file before count
+  tmp_dir=$(mktemp -d)
+  config_file="$tmp_dir/network.conf"
+  hosts_file="$tmp_dir/hosts"
+  trap 'rm -rf "$tmp_dir"' RETURN
+
+  printf '127.0.0.1 localhost\n192.0.2.9 tinyvpn.host.com old-alias\n' > "$hosts_file"
+  printf 'SUBNET=10.44.44.0\n' > "$config_file"
+
+  TINYVPN_CONFIG_FILE=$config_file TINYVPN_HOSTS_FILE=$hosts_file \
+    bash "$BASE_DIR/tinyvpn/update-hosts.sh"
+  assert_contains "$hosts_file" '10.44.44.1 tinyvpn.host.com'
+  assert_not_contains "$hosts_file" '192.0.2.9 tinyvpn.host.com'
+
+  TINYVPN_CONFIG_FILE=$config_file TINYVPN_HOSTS_FILE=$hosts_file \
+    bash "$BASE_DIR/tinyvpn/update-hosts.sh"
+  count=$(grep -Ec '(^|[[:space:]])tinyvpn\.host\.com([[:space:]]|$)' "$hosts_file")
+  [[ $count == 1 ]] || fail "重复运行后 tinyvpn.host.com 出现 $count 次"
+
+  before=$(cat "$hosts_file")
+  printf 'SUBNET=10.44.44.1\n' > "$config_file"
+  if TINYVPN_CONFIG_FILE=$config_file TINYVPN_HOSTS_FILE=$hosts_file \
+    bash "$BASE_DIR/tinyvpn/update-hosts.sh" >/dev/null 2>&1; then
+    fail '应拒绝主机地址作为 SUBNET'
+  fi
+  [[ $(cat "$hosts_file") == "$before" ]] || fail '非法 SUBNET 修改了 hosts 文件'
+
+  printf 'SUBNET=300.1.1.0\n' > "$config_file"
+  if TINYVPN_CONFIG_FILE=$config_file TINYVPN_HOSTS_FILE=$hosts_file \
+    bash "$BASE_DIR/tinyvpn/update-hosts.sh" >/dev/null 2>&1; then
+    fail '应拒绝超出范围的 IPv4 地址'
+  fi
+  [[ $(cat "$hosts_file") == "$before" ]] || fail '越界 SUBNET 修改了 hosts 文件'
+
+  rm -rf "$tmp_dir"
+  trap - RETURN
+  printf 'PASS: update-hosts\n'
+}
+
 test_units_and_roles
+test_update_hosts

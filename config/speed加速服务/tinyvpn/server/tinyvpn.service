@@ -1,0 +1,22 @@
+[Unit]
+Description=tinyfecVPN server service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# 服务端与客户端必须使用相同的隧道网段。
+EnvironmentFile=/etc/tinyvpn/network.conf
+# 只监听环回地址，由 udp2raw 服务端把公网 24096 的流量还原到这里。
+ExecStart=/usr/local/bin/tinyvpn_amd64 -s -l127.0.0.1:44096 -f20:10 -k tinyvpnwjg --mtu 1200 --mode 0 --sub-net ${SUBNET} --tun-dev tun10 --tun-mtu 1200
+
+Restart=always
+RestartSec=2
+
+StandardOutput=journal
+StandardError=journal
+
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

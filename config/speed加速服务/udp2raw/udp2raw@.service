@@ -1,0 +1,19 @@
+# 安装到 /etc/systemd/system/udp2raw@.service。
+# 以 udp2raw@实例名 启动，并从 /etc/udp2raw/实例名.conf 读取 OPTS。
+
+[Unit]
+Description=udp2raw tunnel (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/udp2raw/%i.conf
+# 关闭 GRO 可避免聚合后的超大 UDP 包影响隧道；前导 - 表示网卡或 ethtool 不可用时仍继续启动。
+ExecStartPre=-/usr/sbin/ethtool -K eth0 gro off
+ExecStart=/usr/local/bin/udp2raw_amd64 $OPTS
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

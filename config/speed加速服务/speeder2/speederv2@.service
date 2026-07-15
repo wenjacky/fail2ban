@@ -1,0 +1,17 @@
+# 安装到 /etc/systemd/system/speederv2@.service。
+# 以 speederv2@实例名 启动，并从 /etc/speederv2/实例名.conf 读取 OPTS。
+[Unit]
+Description=UDPspeeder V2 tunnel (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/speederv2/%i.conf
+ExecStart=/usr/local/bin/speederv2_amd64 $OPTS
+Restart=always
+RestartSec=3
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

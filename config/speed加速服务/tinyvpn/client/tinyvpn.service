@@ -1,0 +1,24 @@
+[Unit]
+Description=tinyfecVPN client service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# SUBNET 同时决定隧道网段和 update-hosts.sh 写入的服务端隧道地址。
+EnvironmentFile=/etc/tinyvpn/network.conf
+# 仅客户端更新 tinyvpn.host.com；服务端不得执行此脚本。
+ExecStartPre=/etc/tinyvpn/update-hosts.sh
+# 客户端把 tinyfecVPN 流量送到本机 udp2raw 监听的 44096 端口。
+ExecStart=/usr/local/bin/tinyvpn_amd64 -c -r127.0.0.1:44096 -f20:10 -k tinyvpnwjg --mtu 1200 --mode 0 --sub-net ${SUBNET} --tun-dev tun10 --tun-mtu 1200
+
+Restart=always
+RestartSec=2
+
+StandardOutput=journal
+StandardError=journal
+
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

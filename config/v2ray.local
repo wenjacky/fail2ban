@@ -56,3 +56,22 @@ findtime = 300
 maxretry = 1
 bantime = 30m
 
+[v2ray-blocked]
+enabled  = true
+filter   = v2ray-blocked
+logpath  = /var/log/vlessaccess.log
+action   = iptables-allports[name=v2ray-blocked, protocol=all]
+	 dingding[name=v2ray-blocked, servername=ALIGZWJG]
+findtime = 60
+maxretry = 10
+bantime  = 5m
+
+[v2ray-direct]
+enabled  = true
+filter   = v2ray-direct
+logpath  = /var/log/vlessaccess.log
+action = iptables-allports[name=v2ray-direct, protocol=all]
+	 dingding[name=v2ray-direct,servername=ALIGZWJG]
+findtime = 60
+maxretry = 30
+bantime  = 5m

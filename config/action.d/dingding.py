@@ -104,6 +104,7 @@ def check_if_whitearealist(ip, whitearealist, jailname):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='fail2ban parameter')
+    parser.add_argument('--user', type=str, default='', help='email captured from log')
     parser.add_argument('--ip', type=str, default='N/A', help='IP Address')
     parser.add_argument('--name',
                         type=str,
@@ -138,7 +139,10 @@ if __name__ == '__main__':
     else:
         wlist = ''
 
-    msg = currtime + ' [' + args.name + '] ' + args.action + ' ' + iplocation + args.servername + wlist
+    remarkstr = '(' + args.user + ')' if args.user and args.user not in ('', 'N/A', '<F-USER>') else ''
+    msg = currtime + ' [' + args.name + '] ' + args.action + ' ' + iplocation + remarkstr + ' ' + args.servername + wlist
+
+    #msg = currtime + ' [' + args.name + '] ' + args.action + ' ' + iplocation + args.servername + wlist
 
     #print(msg)
 
